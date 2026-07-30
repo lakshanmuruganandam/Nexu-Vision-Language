@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nexus Vision | AI Image Captioning</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/vanilla-tilt/1.8.0/vanilla-tilt.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;700&display=swap');
+        
+        body { background-color: #030305; color: #fff; font-family: 'Outfit', sans-serif; overflow: hidden; margin: 0; padding: 0; }
+        
+        /* Studio Dynamic Background */
+        .ambient-glow {
+            position: absolute; inset: 0; z-index: 0;
+            background: 
+                radial-gradient(circle at 20% 80%, rgba(244, 63, 94, 0.12) 0%, transparent 50%),
+                radial-gradient(circle at 80% 20%, rgba(168, 85, 247, 0.12) 0%, transparent 50%),
+                linear-gradient(45deg, rgba(255,255,255,0.02) 25%, transparent 25%, transparent 75%, rgba(255,255,255,0.02) 75%, rgba(255,255,255,0.02)),
+                linear-gradient(45deg, rgba(255,255,255,0.02) 25%, transparent 25%, transparent 75%, rgba(255,255,255,0.02) 75%, rgba(255,255,255,0.02));
+            background-size: 100% 100%, 100% 100%, 20px 20px, 20px 20px;
+            background-position: 0 0, 0 0, 0 0, 10px 10px;
+            animation: breathe 12s infinite alternate ease-in-out;
+        }
+        @keyframes breathe {
+            0% { transform: scale(1); opacity: 0.7; }
+            100% { transform: scale(1.15); opacity: 1; }
+        }
+
+        .glass {
+            background: rgba(15, 15, 20, 0.5);
+            backdrop-filter: blur(32px);
+            -webkit-backdrop-filter: blur(32px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 40px 80px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.1);
+            transform-style: preserve-3d;
+        }
+
+        /* Drag and Drop Zone */
+        .dropzone {
+            border: 2px dashed rgba(255,255,255,0.15);
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative; overflow: hidden;
+            transform: translateZ(30px);
+        }
+        .dropzone.dragover {
+            border-color: #f43f5e;
+            background: rgba(244, 63, 94, 0.1);
+            transform: translateZ(50px) scale(1.02);
+            box-shadow: 0 0 40px rgba(244,63,94,0.2);
+        }
+
+        /* Scanning Animation */
+        .scanner {
+            position: absolute; top: 0; left: 0; width: 100%; height: 2px;
+            background: #f43f5e;
+            box-shadow: 0 0 25px 8px rgba(244, 63, 94, 0.8);
+            animation: scan 2s infinite ease-in-out;
+            opacity: 0;
+            z-index: 10;
+        }
+        @keyframes scan {
+            0% { top: 0; }
+            50% { top: 100%; }
+            100% { top: 0; }
+        }
+        .scanning .scanner { opacity: 1; }
+        .scanning img { filter: sepia(1) hue-rotate(300deg) saturate(4) brightness(0.8); animation: glitch 0.3s infinite; }
+
+        @keyframes glitch {
+            0% { transform: translate(0) }
+            20% { transform: translate(-3px, 2px) }
+            40% { transform: translate(-1px, -2px) }
+            60% { transform: translate(3px, 1px) }
+            80% { transform: translate(1px, -1px) }
+            100% { transform: translate(0) }
+        }
+
+        .btn-glowing {
+            background: linear-gradient(135deg, #f43f5e, #a855f7);
+            transition: all 0.3s;
+            position: relative; overflow: hidden;
+        }
+        .btn-glowing::after {
+            content: ''; position: absolute; top: -50%; left: -50%; width: 200%; height: 200%;
+            background: rgba(255,255,255,0.2);
+            transform: rotate(45deg) translateY(-100%);
+            transition: all 0.6s ease;
+        }
+        .btn-glowing:hover::after { transform: rotate(45deg) translateY(100%); }
+        .btn-glowing:hover {
+            box-shadow: 0 15px 35px -5px rgba(244, 63, 94, 0.5);
+            transform: translateY(-3px) scale(1.02);
+        }
+
+        .metric-card {
+            background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06);
+            border-radius: 16px; padding: 16px; transition: all 0.3s;
+            transform: translateZ(20px);
+        }
+        .metric-card:hover {
+            background: rgba(255,255,255,0.06);
+            transform: translateZ(30px) scale(1.02);
+        }
+
+        /* Typewriter Cursor */
+        .cursor {
+            display: inline-block;
+            width: 2px; height: 1em;
+            background: #f43f5e;
+            animation: blink 1s step-end infinite;
+            vertical-align: text-bottom;
+            margin-left: 2px;
+        }
+        @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+    </style>
+</head>
+<body class="flex items-center justify-center min-h-screen">
+    <div class="ambient-glow"></div>
+
+    <div class="z-10 w-full max-w-6xl mx-6 grid grid-cols-1 md:grid-cols-[1fr_380px] gap-8 h-[85vh]">
+        
+        <!-- Left: Upload & Vision Area -->
+        <div class="glass rounded-3xl p-8 flex flex-col relative" data-tilt data-tilt-max="2" data-tilt-speed="400" data-tilt-glare data-tilt-max-glare="0.1">
+            
+            <div class="flex items-center gap-4 mb-6" style="transform: translateZ(40px)">
+                <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-rose-500 to-purple-600 flex items-center justify-center shadow-xl shadow-rose-500/30">
+                    <svg class="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
+                </div>
+                <div>
+                    <h1 class="text-2xl font-bold tracking-tight text-white bg-clip-text text-transparent bg-gradient-to-r from-white to-gray-400">Nexus Vision</h1>
+                    <p class="text-[11px] text-rose-400 font-mono uppercase tracking-widest mt-1">ViT/BLIP Language-Image Engine</p>
+                </div>
+            </div>
+
+            <div id="dropzone" class="dropzone flex-1 rounded-2xl flex flex-col items-center justify-center cursor-pointer group">
+                <input type="file" id="fileInput" accept="image/*" class="hidden">
+                <div id="upload-prompt" class="flex flex-col items-center text-gray-400 group-hover:text-rose-400 transition-colors">
+                    <svg class="w-20 h-20 mb-4 opacity-50 drop-shadow-2xl" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                    <p class="text-xl font-bold">Deploy Image Here</p>
+                    <p class="text-xs font-mono mt-3 opacity-70 border border-gray-600 px-3 py-1 rounded-full">or click to browse local files</p>
+                </div>
+                
+                <div id="image-container" class="hidden absolute inset-0 w-full h-full p-3 bg-black/20">
+                    <img id="preview" class="w-full h-full object-contain rounded-xl shadow-2xl" src="">
+                    <div class="scanner"></div>
+                </div>
+            </div>
+
+            <!-- Result Box -->
+            <div class="mt-8 bg-black/60 border border-white/10 rounded-2xl p-6 min-h-[140px] flex flex-col justify-center relative" style="transform: translateZ(40px)">
+                <div class="absolute -top-3 left-6 bg-gradient-to-r from-rose-500 to-purple-500 text-white text-[10px] font-bold px-4 py-1 rounded-full uppercase tracking-widest shadow-lg shadow-rose-500/30 border border-white/20">Generated Inference</div>
+                <p class="text-2xl font-medium text-gray-200 font-serif leading-relaxed italic mt-2">
+                    <span id="caption-text">Awaiting visual input...</span><span id="cursor" class="cursor hidden"></span>
+                </p>
+            </div>
+        </div>
+
+        <!-- Right: Telemetry Dashboard -->
+        <div class="glass rounded-3xl p-8 flex flex-col" data-tilt data-tilt-max="3" data-tilt-speed="400" data-tilt-glare data-tilt-max-glare="0.1">
+            <h2 class="text-rose-400 font-bold mb-8 border-b border-white/10 pb-3 flex items-center gap-3 text-sm tracking-widest uppercase" style="transform: translateZ(30px)">
+                <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>
+                Engine Telemetry
+            </h2>
+
+            <div class="flex flex-col gap-5 mb-auto">
+                <div class="metric-card">
+                    <div class="text-[10px] font-bold tracking-widest text-gray-400 mb-1 uppercase">Vision Transformer Architecture</div>
+                    <div id="stat-model" class="text-sm font-bold text-white truncate">Salesforce/BLIP (Base)</div>
+                </div>
+                <div class="metric-card">
+                    <div class="text-[10px] font-bold tracking-widest text-gray-400 mb-1 uppercase">Compute Backend</div>
+                    <div id="stat-fw" class="text-sm font-bold text-white">PyTorch (Native)</div>
+                </div>
+                <div class="metric-card border-rose-500/30 bg-rose-500/5">
+                    <div class="text-[10px] font-bold tracking-widest text-gray-400 mb-1 uppercase">Inference Latency</div>
+                    <div id="stat-time" class="text-3xl font-bold text-rose-400 drop-shadow-md">0.0<span class="text-sm text-gray-500 font-normal">ms</span></div>
+                </div>
+                <div class="metric-card">
+                    <div class="text-[10px] font-bold tracking-widest text-gray-400 mb-1 uppercase">Subsystem Status</div>
+                    <div id="stat-status" class="text-sm font-bold text-emerald-400 flex items-center gap-2">
+                        <div class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></div>
+                        IDLE (Ready)
+                    </div>
+                </div>
+            </div>
+
+            <button onclick="document.getElementById('fileInput').click()" class="btn-glowing w-full text-white py-4 rounded-xl font-bold tracking-widest mt-8 border border-white/20" style="transform: translateZ(30px)">
+                INJECT NEW IMAGE
+            </button>
+            <div class="mt-6 pt-4 border-t border-white/10 flex justify-between items-center text-[10px] font-mono text-gray-500" style="transform: translateZ(20px)">
+                <span>Design System:</span>
+                <span class="text-gray-300 font-bold">Nexus Glass UI v2</span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const dropzone = document.getElementById('dropzone');
+        const fileInput = document.getElementById('fileInput');
+        const uploadPrompt = document.getElementById('upload-prompt');
+        const imageContainer = document.getElementById('image-container');
+        const preview = document.getElementById('preview');
+        const captionText = document.getElementById('caption-text');
+        const cursor = document.getElementById('cursor');
+        
+        // Telemetry
+        const sTime = document.getElementById('stat-time');
+        const sStatus = document.getElementById('stat-status');
+        const sModel = document.getElementById('stat-model');
+        const sFw = document.getElementById('stat-fw');
+
+        // Drag and Drop handlers
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+            dropzone.addEventListener(eventName, preventDefaults, false);
+        });
+        function preventDefaults(e) { e.preventDefault(); e.stopPropagation(); }
+
+        ['dragenter', 'dragover'].forEach(eventName => {
+            dropzone.addEventListener(eventName, () => dropzone.classList.add('dragover'), false);
+        });
+        ['dragleave', 'drop'].forEach(eventName => {
+            dropzone.addEventListener(eventName, () => dropzone.classList.remove('dragover'), false);
+        });
+
+        dropzone.addEventListener('drop', handleDrop, false);
+        dropzone.addEventListener('click', () => fileInput.click());
+        fileInput.addEventListener('change', function() { handleFiles(this.files); });
+
+        function handleDrop(e) {
+            const dt = e.dataTransfer;
+            const files = dt.files;
+            handleFiles(files);
+        }
+
+        let typeInterval = null;
+        function typeWriter(text, i = 0) {
+            cursor.classList.remove('hidden');
+            if (i === 0) {
+                captionText.innerHTML = '';
+                if(typeInterval) clearTimeout(typeInterval);
+            }
+            if (i < text.length) {
+                captionText.innerHTML += text.charAt(i);
+                typeInterval = setTimeout(() => typeWriter(text, i + 1), 25);
+            }
+        }
+
+        function handleFiles(files) {
+            if(files.length === 0) return;
+            const file = files[0];
+            if(!file.type.startsWith('image/')) return;
+
+            // Show Image
+            const reader = new FileReader();
+            reader.readAsDataURL(file);
+            reader.onload = function(e) {
+                preview.src = e.target.result;
+                uploadPrompt.classList.add('hidden');
+                imageContainer.classList.remove('hidden');
+            }
+
+            processImage(file);
+        }
+
+        async function processImage(file) {
+            // UI Loading State
+            dropzone.classList.add('scanning');
+            cursor.classList.add('hidden');
+            captionText.innerHTML = '<span class="text-rose-400 font-mono text-sm tracking-widest animate-pulse">Running BLIP Vision Encoder... Extracting spatial features... (First run may take a moment to load weights into memory)</span>';
+            
+            sStatus.innerHTML = `
+                <div class="w-2 h-2 rounded-full bg-yellow-400 animate-pulse"></div>
+                INFERENCE IN PROGRESS
+            `;
+            sStatus.className = "text-sm font-bold text-yellow-400 flex items-center gap-2";
+            sTime.innerHTML = `---`;
+
+            const formData = new FormData();
+            formData.append('file', file);
+
+            try {
+                const response = await fetch('/api/caption', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const data = await response.json();
+                
+                dropzone.classList.remove('scanning');
+                
+                if(data.status === 'success') {
+                    sStatus.innerHTML = `
+                        <div class="w-2 h-2 rounded-full bg-emerald-400"></div>
+                        CAPTION GENERATED
+                    `;
+                    sStatus.className = "text-sm font-bold text-emerald-400 flex items-center gap-2";
+                    sTime.innerHTML = data.telemetry.execution_ms.replace('ms', '<span class="text-sm text-gray-500 font-normal">ms</span>');
+                    sModel.textContent = data.telemetry.model;
+                    sFw.textContent = data.telemetry.framework;
+                    
+                    // Format caption (capitalize first letter)
+                    let cap = data.caption.trim();
+                    cap = cap.charAt(0).toUpperCase() + cap.slice(1);
+                    typeWriter(`"${cap}"`);
+                } else {
+                    captionText.innerHTML = `<span class="text-red-500">Error: ${data.caption}</span>`;
+                    sStatus.innerHTML = `
+                        <div class="w-2 h-2 rounded-full bg-red-500"></div>
+                        ERROR
+                    `;
+                    sStatus.className = "text-sm font-bold text-red-500 flex items-center gap-2";
+                }
+
+            } catch(e) {
+                dropzone.classList.remove('scanning');
+                captionText.innerHTML = '<span class="text-red-500 font-mono">Network Error: Failed to reach inference engine.</span>';
+                sStatus.innerHTML = `
+                    <div class="w-2 h-2 rounded-full bg-red-500"></div>
+                    CONNECTION FAILED
+                `;
+                sStatus.className = "text-sm font-bold text-red-500 flex items-center gap-2";
+            }
+        }
+    </script>
+</body>
+</html>
