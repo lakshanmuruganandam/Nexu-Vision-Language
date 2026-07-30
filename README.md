@@ -9,15 +9,19 @@
   [![Status](https://img.shields.io/badge/Status-Production_Ready-success.svg)]()
 </div>
 
-> **NexuCaption** represents the pinnacle of multi-modal AI integration. By bridging Vision Transformers (ViT) with generative Language Models (GPT-2), it acts as an automated, high-precision image captioning service tailored for media asset management, accessibility compliance, and semantic search platforms.
+---
+
+## 🚀 The Vision
+
+Tagging and describing massive libraries of image data is a severe operational bottleneck for media companies, digital asset management (DAM) platforms, and accessibility (A11Y) teams. Relying on human labor is unscalable, slow, and expensive. 
+
+**NexuCaption** represents the pinnacle of multi-modal AI integration. By bridging Vision Transformers (ViT) with generative Language Models (GPT-2), it acts as an automated, high-precision image captioning service that delivers contextual semantic descriptions of visual data in milliseconds.
 
 ---
 
-## 🏆 The Future of Accessibility & DAM
+## 🏆 Unmatched Performance: Competitive Analysis
 
-Tagging and describing massive libraries of image data is a severe operational bottleneck for media companies and accessibility teams. Relying on human labor is unscalable and slow. NexuCaption solves this by providing automated, context-aware semantic descriptions of visual data in milliseconds.
-
-### 🔥 Competitive Analysis: NexuCaption vs. The Industry
+NexuCaption outclasses older CNN-RNN combinations and avoids the heavy API costs of enterprise cloud solutions.
 
 | Feature | NexuCaption (Ours) | Cloud Vision API | Traditional CNN-RNN | AWS Rekognition |
 |---------|-----------------|------------------|---------------------|-----------------|
@@ -27,28 +31,38 @@ Tagging and describing massive libraries of image data is a severe operational b
 | **Operating Cost**| **Zero (Open Source)**| High | Zero | High |
 | **Custom Fine-Tuning**| **Yes (HuggingFace Integration)**| No | Yes | No |
 
-As shown, NexuCaption combines the state-of-the-art accuracy of transformer architectures with the privacy and cost-efficiency of on-premise open-source models. It completely outclasses older CNN-RNN combinations and avoids the heavy API costs of enterprise cloud solutions.
+By leveraging HuggingFace's `VisionEncoderDecoderModel`, NexuCaption achieves cloud-level accuracy while guaranteeing 100% data sovereignty (on-premise execution). 
 
 ---
 
-## 🚀 Architecture & System Flow
+## 🧠 Core Architecture & System Flow
 
 ```mermaid
 graph TD
-    A[Client UI - Image Upload] -->|POST Base64/Form| B(FastAPI Gateway)
-    B --> C{Image Preprocessor}
-    C -->|RGB Normalization| D[Vision Transformer - ViT]
-    D -->|Latent Image Embeddings| E[GPT-2 Autoregressive Decoder]
-    E -->|Beam Search| F[Semantic Text Sequence]
-    F --> G[JSON Response]
-    G -->|Rendered| A
+    A["Client UI - Image Upload"] -->|"POST Base64/Form"| B("FastAPI Gateway")
+    B --> C{"Image Preprocessor"}
+    C -->|"RGB Normalization"| D["Vision Transformer (ViT)"]
+    D -->|"Latent Image Embeddings"| E["GPT-2 Autoregressive Decoder"]
+    E -->|"Beam Search"| F["Semantic Text Sequence"]
+    F --> G["JSON Response"]
+    G -->|"Rendered UI"| A
 ```
 
-### 1. The Encoder-Decoder Model
-We utilize HuggingFace's `VisionEncoderDecoderModel` to seamlessly connect `vit-base-patch16-224-in21k` as the encoder and `gpt2` as the decoder. This means the visual features extracted by the ViT are passed as cross-attention keys/values to the GPT-2 decoder, which then generates the caption token-by-token.
+### 1. The Encoder-Decoder Multi-Modal Pipeline
+We utilize HuggingFace to seamlessly connect `vit-base-patch16-224-in21k` as the encoder and `gpt2` as the decoder. This means the visual features extracted by the ViT (the patches) are passed as cross-attention keys and values to the GPT-2 decoder. The language model then generates a highly descriptive caption, token by token, resulting in fluent, human-like descriptions.
 
-### 2. VisionOS Frontend Integration
-The API is surfaced through a stunning, glassmorphism-inspired drag-and-drop interface. It leverages browser APIs to parse images securely before transmitting them to the local server.
+### 2. Zero-Config VisionOS Frontend
+The API is surfaced through a stunning, glassmorphism-inspired drag-and-drop interface. It leverages native browser APIs (like `FileReader`) to display image previews instantly, before transmitting the payload to the local FastAPI server for processing.
+
+---
+
+## 📂 Project Structure & Files
+
+- `main.py`: The FastAPI server that handles image uploads and API routing.
+- `caption_engine.py`: The heavy-lifting HuggingFace pipeline integrating ViT and GPT-2 models.
+- `static/index.html`: The premium, Apple-inspired drag-and-drop web interface.
+- `static/styles.css`: The CSS that powers the animations, glassmorphism, and responsive layout.
+- `static/script.js`: Handles asynchronous file uploads, loading states, and DOM updates.
 
 ---
 
@@ -70,7 +84,7 @@ pip install torch transformers pillow fastapi uvicorn python-multipart
 # 3. Boot the API Server
 python main.py
 ```
-*Note: The first run will download the ViT-GPT2 model weights (~900MB).*
+*Note: The first run will download the ViT-GPT2 model weights (~900MB) automatically from HuggingFace.*
 
 ---
 
